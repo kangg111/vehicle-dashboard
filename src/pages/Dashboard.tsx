@@ -46,7 +46,7 @@ interface Vehicle {
 }
 
 const Dashboard: React.FC = () => {
-  const [inputValue, setInputValue] = useState<string>("");
+  const [licensePlateSearch, setlicensePlateSearch] = useState<string>("");
   const [highlights, setHighlights] = useState<VehicleHighlight | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -55,10 +55,11 @@ const Dashboard: React.FC = () => {
     pageSize: 10,
   });
   const [filter, setFilter] = useState<string>("");
-  const [selectedCard, setSelectedCard] = useState<string>("");
+  const [selectedHighlightFilter, setselectedHighlightFilter] =
+    useState<string>("");
 
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [dateRange, setDateRange] = useState<
+  const [appliedSearchTerm, setappliedSearchTerm] = useState<string>("");
+  const [selectedDateRange, setselectedDateRange] = useState<
     [Moment | null, Moment | null] | null
   >(null);
   const [vehicleType, setVehicleType] = useState<string | undefined>(undefined);
@@ -75,36 +76,33 @@ const Dashboard: React.FC = () => {
     undefined
   );
 
-  const fetchVehicles = async (
+  const fetchVehicleData = async (
     pagination: TablePaginationConfig,
     sorter: any,
     filter: string,
-    searchTerm: string
+    appliedSearchTerm: string
   ) => {
     try {
       setLoading(true);
-
-      // Construct filters directly
       const filters: any = {};
 
-      // Apply filtering based on selected card
       if (filter === "Draft") {
-        filters.approval_status = 0; // Draft
+        filters.approval_status = 0;
       } else if (filter === "Rejected") {
-        filters.approval_status = 3; // Rejected
-        filters.vehicle_status = 0; // Active
+        filters.approval_status = 3;
+        filters.vehicle_status = 0;
       } else if (filter === "Pending Information") {
-        filters.approval_status = 2; // Pending
-        filters.vehicle_status = 0; // Active
+        filters.approval_status = 2;
+        filters.vehicle_status = 0;
       }
 
-      if (searchTerm) {
-        filters.license_plate = searchTerm;
+      if (appliedSearchTerm) {
+        filters.license_plate = appliedSearchTerm;
       }
 
-      if (dateRange) {
-        filters.mtime_from = dateRange[0]?.valueOf();
-        filters.mtime_to = dateRange[1]?.valueOf();
+      if (selectedDateRange) {
+        filters.mtime_from = selectedDateRange[0]?.valueOf();
+        filters.mtime_to = selectedDateRange[1]?.valueOf();
       }
 
       if (vehicleType) {
@@ -127,13 +125,12 @@ const Dashboard: React.FC = () => {
         filters.vehicle_status = vehicleStatus;
       }
 
-      // Construct request body without filterCriteria wrapper
       const requestBody = {
         page: pagination.current,
         size: pagination.pageSize,
         sortBy: sorter.field,
         sortOrder: sorter.order,
-        ...filters, // Spread filters directly
+        ...filters,
       };
 
       const response = await fetch("/api/v1/ia/vehicle/get_all_vehicles", {
@@ -158,7 +155,7 @@ const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchHighlights = async () => {
+    const fetchVehicleHighlights = async () => {
       try {
         const response = await fetch("/api/v1/ia/vehicle/get_highlights", {
           method: "POST",
@@ -180,11 +177,10 @@ const Dashboard: React.FC = () => {
       }
     };
 
-    fetchHighlights();
-    fetchVehicles(pagination, {}, filter, inputValue); // Initial fetch
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchVehicleHighlights();
+    fetchVehicleData(pagination, {}, filter, licensePlateSearch);
   }, [
-    dateRange,
+    selectedDateRange,
     filter,
     pagination.current,
     vehicleType,
@@ -194,33 +190,26 @@ const Dashboard: React.FC = () => {
     vehicleStatus,
   ]);
 
-  // useEffect(() => {
-  //   fetchVehicles(pagination, {}, filter, searchTerm);
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [searchTerm]); // Triggers API call when searchTerm updates
-
-  const handleTableChange = (
+  const onTableChange = (
     pagination: TablePaginationConfig,
     filters: any,
     sorter: any
   ) => {
     setLoading(true);
-    fetchVehicles(pagination, sorter, filter, inputValue); // Call the fetchVehicles function here
+    fetchVehicleData(pagination, sorter, filter, licensePlateSearch);
   };
 
-  const handleCardClick = (description: string) => {
-    setDateRange(null);
-    setInputValue("");
-    if (selectedCard === description) {
-      // If the card is already selected, deselect it
-      setSelectedCard(""); // Reset the selected card
-      setFilter(""); // Reset the filter
+  const onHighlightCardClick = (description: string) => {
+    setselectedDateRange(null);
+    setlicensePlateSearch("");
+    if (selectedHighlightFilter === description) {
+      setselectedHighlightFilter("");
+      setFilter("");
     } else {
-      // Select the card and apply filter
-      setSelectedCard(description);
-      setFilter(description); // Set filter based on selected card
+      setselectedHighlightFilter(description);
+      setFilter(description);
     }
-    setLoading(true); // Trigger loading state when a new filter is applied
+    setLoading(true);
   };
 
   if (loading) {
@@ -237,19 +226,19 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  const handleClearFilters = () => {
-    setInputValue("");
-    setSearchTerm("");
-    setDateRange(null);
+  const clearFilters = () => {
+    setlicensePlateSearch("");
+    setappliedSearchTerm("");
+    setselectedDateRange(null);
     setVehicleType(undefined);
     setMinPassengerCapacity(undefined);
     setMaxPassengerCapacity(undefined);
     setApprovalStatus(undefined);
     setVehicleStatus(undefined);
     setFilter("");
-    setSelectedCard("");
+    setselectedHighlightFilter("");
     setLoading(true);
-    fetchVehicles(pagination, {}, "", "");
+    fetchVehicleData(pagination, {}, "", "");
   };
 
   const cardsData = [
@@ -274,42 +263,42 @@ const Dashboard: React.FC = () => {
       key: "license_plate",
       fixed: "left",
       width: 150,
-      sorter: true, // Enable sorting
+      sorter: true,
     },
     {
       title: "Driver",
       dataIndex: "driver",
       key: "driver",
       width: 150,
-      sorter: true, // Enable sorting
+      sorter: true,
     },
     {
       title: "Vehicle Type",
       dataIndex: "vehicle_type",
       key: "vehicle_type",
       width: 150,
-      sorter: true, // Enable sorting
+      sorter: true,
     },
     {
       title: "Status",
       dataIndex: "vehicle_status",
       key: "vehicle_status",
       width: 150,
-      sorter: true, // Enable sorting
+      sorter: true,
     },
     {
       title: "Owner",
       dataIndex: "vehicle_owner",
       key: "vehicle_owner",
       width: 150,
-      sorter: true, // Enable sorting
+      sorter: true,
     },
     {
       title: "Approval Status",
       dataIndex: "approval_status",
       key: "approval_status",
       width: 150,
-      sorter: true, // Enable sorting
+      sorter: true,
     },
     {
       title: "Trips",
@@ -321,16 +310,16 @@ const Dashboard: React.FC = () => {
     },
   ];
 
-  const handleSearch = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  const onSearchEnter = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
-      fetchVehicles(pagination, {}, filter, inputValue); // Use inputValue directly
-      setSearchTerm(inputValue); // Update state after triggering search
+      fetchVehicleData(pagination, {}, filter, licensePlateSearch);
+      setappliedSearchTerm(licensePlateSearch);
     }
   };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      {/* <h1 className="text-3xl font-bold mb-6">Vehicle Dashboard</h1> */}
+      <h1 className="text-3xl font-bold mb-6">Vehicle Dashboard</h1>
 
       <Row gutter={16} justify="center">
         {cardsData.map((card, index) => (
@@ -338,12 +327,14 @@ const Dashboard: React.FC = () => {
             <Card
               bordered={false}
               className={`shadow-lg rounded-lg ${
-                selectedCard === card.description ? "bg-gray-300" : "bg-white"
+                selectedHighlightFilter === card.description
+                  ? "bg-gray-300"
+                  : "bg-white"
               }`}
               actions={[
                 <span
                   key="view"
-                  onClick={() => handleCardClick(card.description)}
+                  onClick={() => onHighlightCardClick(card.description)}
                 >
                   View <ArrowRightOutlined />
                 </span>,
@@ -358,40 +349,29 @@ const Dashboard: React.FC = () => {
         ))}
       </Row>
       <div className="my-4 flex flex-col md:flex-row md:items-center gap-4">
-        {/* <Input
-          allowClear
-          placeholder="Search by License Plate"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyPress={(e) => {
-            if (e.key === "Enter") {
-              setSearchTerm(inputValue); // Set the search term
-              setLoading(true); // Trigger loading state
-              fetchVehicles(pagination, {}, filter); // Fetch filtered data
-            }
-          }}
-          className="w-full md:max-w-[15rem]"
-        /> */}
-
         <Input
           placeholder="Search by License Plate"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleSearch} // Use onKeyDown instead of onKeyPress
+          value={licensePlateSearch}
+          onChange={(e) => setlicensePlateSearch(e.target.value)}
+          onKeyDown={onSearchEnter}
         />
 
         <RangePicker
           allowClear
           value={
-            dateRange
+            selectedDateRange
               ? [
-                  dateRange[0] ? dayjs(dateRange[0].toISOString()) : null,
-                  dateRange[1] ? dayjs(dateRange[1].toISOString()) : null,
+                  selectedDateRange[0]
+                    ? dayjs(selectedDateRange[0].toISOString())
+                    : null,
+                  selectedDateRange[1]
+                    ? dayjs(selectedDateRange[1].toISOString())
+                    : null,
                 ]
               : null
           }
           onChange={(dates) =>
-            setDateRange(
+            setselectedDateRange(
               dates
                 ? [
                     dates[0] ? moment(dates[0].toISOString()) : null,
@@ -442,7 +422,9 @@ const Dashboard: React.FC = () => {
           allowClear
           placeholder="Select Approval Status"
           value={approvalStatus}
-          onChange={(value) => setApprovalStatus(Number(value))}
+          onChange={(value) =>
+            setApprovalStatus(value !== undefined ? Number(value) : undefined)
+          }
           className="w-full md:max-w-[15rem]"
         >
           <Option value={0}>Draft</Option>
@@ -455,7 +437,9 @@ const Dashboard: React.FC = () => {
           allowClear
           placeholder="Select Vehicle Status"
           value={vehicleStatus}
-          onChange={(value) => setVehicleStatus(Number(value))}
+          onChange={(value) =>
+            setVehicleStatus(value !== undefined ? Number(value) : undefined)
+          }
           className="w-full md:max-w-[15rem]"
         >
           <Option value={0}>Active</Option>
@@ -463,10 +447,7 @@ const Dashboard: React.FC = () => {
           <Option value={2}>Decommissioned</Option>
         </Select>
 
-        <Button
-          onClick={handleClearFilters}
-          className="w-full md:max-w-[10rem]"
-        >
+        <Button onClick={clearFilters} className="w-full md:max-w-[10rem]">
           Clear Filters
         </Button>
       </div>
@@ -478,7 +459,7 @@ const Dashboard: React.FC = () => {
         scroll={{ x: "max-content", y: "490px" }}
         pagination={pagination}
         loading={loading}
-        onChange={handleTableChange}
+        onChange={onTableChange}
       />
     </div>
   );
