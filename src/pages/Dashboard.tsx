@@ -133,12 +133,15 @@ const Dashboard: React.FC = () => {
         ...filters,
       };
 
-      const response = await fetch("/api/v1/ia/vehicle/get_all_vehicles", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-        mode: "cors",
-      });
+      const response = await fetch(
+        "https://ia.tnx1.xyz/api/v1/ia/vehicle/get_all_vehicles",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+          mode: "cors",
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Failed to fetch vehicle data: ${response.status}`);
@@ -157,14 +160,17 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const fetchVehicleHighlights = async () => {
       try {
-        const response = await fetch("/api/v1/ia/vehicle/get_highlights", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-          mode: "cors",
-        });
+        const response = await fetch(
+          "https://ia.tnx1.xyz/api/v1/ia/vehicle/get_highlights",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({}),
+            mode: "cors",
+          }
+        );
 
         if (!response.ok) {
           throw new Error(`Failed to fetch data: ${response.status}`);
